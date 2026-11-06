@@ -1,30 +1,50 @@
-#ifndef ICKLIB_H_ICKCLOCK
-#define ICKLIB_H_ICKCLOCK
+#ifndef ICKLIB_H_CLOCK
+#define ICKLIB_H_CLOCK
+#define CLOCK_UPDATE_FQ (50 * 1000000)
+
+#include <threads.h>
 #include <time.h>
-typedef enum {
-  TC_ERR        = -1,
-  TC_IDLE       = 0,
-  TC_JOB        = 1,
-  TC_TERMINATE  = 2,
-} ickclock_stat;
-typedef enum {
-  TC_THRD       = 0,
-  TC_SEQ        = 1,
-  TC_TICK       = 2,
-} ickclock_mode;
+
+typedef enum { CLOCK_IDLE, CLOCK_JOB, CLOCK_TERMINATE, CLOCK_ERR }  ickclock_stat;
+typedef enum { CLOCK_TICK, CLOCK_THRD, CLOCK_SEQ }                  ickclock_mode;
+typedef void (*ickclock_listener_func)(void *);
 typedef struct ickclock_t ickclock_t;
+
+#ifdef __cplusplus
+static inline void ickwait(time_t sec) {
+  struct timespec ts = { .tv_sec = sec, .tv_nsec = 0 };
+  thrd_sleep(&ts, NULL);
+}
+
+static inline void ickwaitn(time_t nsec) {
+  struct timespec ts = { .tv_sec = 0, .tv_nsec = nsec };
+  thrd_sleep(&ts, NULL);
+}
+#else
+static inline void ickwait(time_t sec)
+{ thrd_sleep(&(struct timespec){.tv_sec = sec}, NULL); }
+
+static inline void ickwaitn (time_t nsec)
+{ thrd_sleep(&(struct timespec){.tv_sec = 0, .tv_nsec = nsec}, NULL); }
+#endif
+
 ickclock_t* ickclock();
-ickclock_t* ickclock_read(const char* dir);
-int ickclock_write(ickclock_t* tar, const char* dir);
-int ickclock_smash(ickclock_t** tar);
-int ickclock_kill(ickclock_t* tar);
-int ickclock_boot(ickclock_t* tar);
-void ickclock_reset(ickclock_t* tar);
-time_t ickclock_getcurr(const ickclock_t* tar);
-time_t ickclock_getcend(const ickclock_t* tar);
-time_t ickclock_getclen(const ickclock_t* tar);
-void ickclock_setclen(ickclock_t* tar, int len);
-void ickclock_setmode(ickclock_t* tar, ickclock_mode md);
-ickclock_stat ickclock_getstat(const ickclock_t* tar);
-ickclock_mode ickclock_getmode(const ickclock_t* tar);
+
+void ickclock_listen(ickclock_t *tar, ickclock_listener_func func, void *args);
+void ickclock_setlen(ickclock_t *tar, time_t t);
+void ickclock_setmode(ickclock_t *tar, ickclock_mode md);
+void ickclock_setinterval(ickclock_t *tar, time_t t);
+
+time_t        ickclock_getlen(ickclock_t *tar);
+time_t        ickclock_getcurr(ickclock_t *tar);
+time_t        ickclock_getcend(ickclock_t *tar);
+time_t        ickclock_getinterval(ickclock_t *tar);
+
+ickclock_mode ickclock_getmode(ickclock_t *tar);
+ickclock_stat ickclock_getstat(ickclock_t *tar);
+
+int ickclock_smash(ickclock_t *tar);
+int ickclock_boot(ickclock_t *tar);
+int ickclock_shut(ickclock_t *tar);
+
 #endif
